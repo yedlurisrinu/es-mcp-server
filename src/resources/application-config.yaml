@@ -1,0 +1,46 @@
+# In container
+ELASTIC_URL: "http://elasticsearch:9200" 
+# On local Host
+# ELASTIC_URL: "http://localhost:9200"
+request_timeout: 60
+retry_on_timeout: True
+max_retries: 3
+http_compress: True
+# Connection pooling for cloud
+connections_per_node: 10
+
+ES_INDEX: news_articles
+CATEGORY_QUERY: 
+  size: 0
+  query:
+    bool:
+      should: []                 # filled in code, one match clause per category
+      minimum_should_match: 1
+  aggs:
+    matched_sources:
+      terms:
+        field: source.keyword
+        size: 20
+
+# Build an ES query that:
+      # - Uses semantic search on the `content.semantic` field (semantic_text). TODO this part is not complete yet
+      # - Boosts documents whose title matches any of the extracted categories.
+SEARCH_QUERY_TEMPLATE:
+  size: 5
+  _source: [article_id]
+  query:
+    bool:
+      must:
+        - multi_match:
+            query: ""             # filled in code: user query
+            fields: ["title^2", "content"]
+            minimum_should_match: "2<75%"
+      should:
+        - multi_match:
+            query: ""             # filled in code: expanded category terms
+            fields: [title]
+            boost: 1.5
+
+issuer_realm: http://keycloak:8180/realms/es-mcp
+well_known_uri: /.well-known/openid-configuration
+audience: http://es-mcp-lb:9599/mcp

@@ -1,0 +1,52 @@
+x-es-mcp-env: &es_mcp_env
+  PYTHONPATH: src
+  VAULT_ADDR: http://vault-server:8200
+  VAULT_TOKEN: ${VAULT_TOKEN}
+  VAULT_SECRET_PATH: secret/CREDENTIALS
+  MCP_ALLOWED_HOSTS: "es-mcp-lb:9599"
+
+x-es-mcp: &es_mcp
+  build:
+    context: .
+    dockerfile: Dockerfile
+    network: host
+  image: es-mcp-server:1.0.0
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8009/healthz\")' || exit 1"]
+    interval: 60s
+    timeout: 5s
+    retries: 5
+    start_period: 30s
+  networks:
+    - vault-network
+    - services_network
+
+
+# ── Services ──────────────────────────────────────────────────────────────────
+
+services:
+  es-mcp-server-1:
+    <<: *es_mcp
+    container_name: es-mcp-server-r1
+    environment:
+      <<: *es_mcp_env
+      REPLICA_ID: r1
+    ports: ["9551:8009"]
+    volumes:
+      - ../logs:/app/logs
+  es-mcp-server-2:
+    <<: *es_mcp
+    container_name: es-mcp-server-r2
+    environment:
+      <<: *es_mcp_env
+      REPLICA_ID: r2
+    ports: ["9552:8009"]
+    volumes:
+      - ../logs:/app/logs
+# ── Networks ──────────────────────────────────────────────────────────────────
+networks:
+  vault-network:
+    external: true
+  services_network:
+    external: true

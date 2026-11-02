@@ -1,0 +1,33 @@
+[project]
+name = "es-mcp-server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "elasticsearch==9.2.1",
+    "hvac==2.4.0",
+    "joserfc==1.7.7",
+    "mcp==2.3.0",
+    "pydantic==2.14.1",
+    "pyyaml==6.0.3",
+    "uvicorn==0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.1",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+explicit_package_bases = true
+namespace_packages = true
+ignore_missing_imports = true      # langgraph, langsmith and hvac ship no stubs
+warn_unused_ignores = true
+
+[tool.uv]
+package = true

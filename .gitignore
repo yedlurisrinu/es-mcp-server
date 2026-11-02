@@ -1,0 +1,12 @@
+.idea
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+src/learning/thread*
+.vscode/

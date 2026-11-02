@@ -1,0 +1,7 @@
+elasticsearch==9.2.1
+hvac==2.4.0
+joserfc==1.7.7
+mcp==2.3.0
+pydantic==2.14.1
+pyyaml==6.0.3
+uvicorn==0.54.0

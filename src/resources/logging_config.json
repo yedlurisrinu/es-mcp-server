@@ -1,0 +1,33 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+        "standard": {
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        }
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+            "level": "INFO"
+        },
+        "file": {
+            "class": "logging.FileHandler",
+            "filename": "/app/logs/es-mcp-server.log",
+            "formatter": "standard",
+            "level": "INFO"
+        }
+    },
+    "root": {
+        "handlers": ["console", "file"],
+        "level": "DEBUG"
+    },
+    "loggers": {
+        "my_project": {
+            "handlers": ["console", "file"],
+            "level": "DEBUG",
+            "propagate": false
+        }
+    }
+}
