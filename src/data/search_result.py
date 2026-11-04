@@ -6,4 +6,3 @@ from data.article_reference import ArticleReference
 
 class SearchResult(BaseModel):
     article_refs: Annotated[list[ArticleReference], Field(description="List of article references that have article_id and score")]
-    duration_seconds: Annotated[dict[str, float], Field(description="How long the search query took")]

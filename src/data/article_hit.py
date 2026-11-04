@@ -1,8 +1,13 @@
-from typing import TypedDict, Required
+from pydantic import BaseModel
+from pydantic.fields import Field
+from typing import Annotated
 
-class ArticleHit(TypedDict):
+class ArticleHit(BaseModel):
     """A single retrieved news article."""
-    title: Required[str]
-    source: Required[str]
-    published_at: Required[str]
-    link: Required[str]
+    article_id: Annotated[str, Field(description="article unique id")] 
+    title: Annotated[str, Field(description="title of the article ")] 
+    source: Annotated[str, Field(description=" source from where article is received ")] 
+    published_at: Annotated[str, Field(description=" date published ")] 
+    link: Annotated[str, Field(description=" The article complete link ")] 
+    content: Annotated[str, Field(description=" The content of the article, it might be truncated and check truncated and content_length for details  ")]
+    

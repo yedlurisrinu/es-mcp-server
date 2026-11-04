@@ -1,0 +1,3 @@
+
+class NoArticleFound(Exception):
+    ...

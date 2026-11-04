@@ -44,3 +44,5 @@ SEARCH_QUERY_TEMPLATE:
 issuer_realm: http://keycloak:8180/realms/es-mcp
 well_known_uri: /.well-known/openid-configuration
 audience: http://es-mcp-lb:9599/mcp
+ARTICLE_CONTENT_MAX_CHARS: 1000
+TRUNCATE: True

@@ -13,6 +13,8 @@ from asyncio import Lock
 import logging 
 logger = logging.getLogger(__file__)
 
+class JWKSUnavailable(Exception):
+    ...
 class RateLimitTokenVerifier:
 
     def __init__(self, issuer: str, audience :str):
@@ -87,7 +89,7 @@ class RateLimitTokenVerifier:
             token_kid = self.kid_of(token)
             if token_kid is None :
                 return None
-            try:   
+            try:  
                 keys = self._keys
                 if self._keys is None:
                     keys = await self._keyset()
@@ -95,10 +97,15 @@ class RateLimitTokenVerifier:
                     # noting to do, if it raises invalid key id error, exception block will call _keyset
                     # otherwise, nothing to do, kid exist it will just proceed with decode
                     ... 
-
+                if keys is None:
+                    raise JWKSUnavailable("missing keys")
                 decoded = jwt.decode(token, keys, algorithms=["RS256"])
             except InvalidKeyIdError: 
-                decoded = jwt.decode(token, await self._keyset(token_kid), algorithms=["RS256"])  # key rotation
+                keys = await self._keyset(token_kid)
+                if keys is None:
+                   raise JWKSUnavailable("missing keys")
+                decoded = jwt.decode(token,keys, algorithms=["RS256"])  # key rotation
+                
             jwt.JWTClaimsRegistry(iss={"essential": True, "value": self.issuer},
                                     aud={"essential": True, "value": self.audience},
                                     exp={"essential": True}).validate(decoded.claims)
