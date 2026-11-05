@@ -8,11 +8,15 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+
 from elasticsearch import Elasticsearch
+
 from config.application_config import get_config
+
 # ---------------------------------------------------------------------------
 # Elasticsearch client
 # ---------------------------------------------------------------------------
+
 
 @lru_cache(maxsize=1)
 def get_es_client() -> Elasticsearch:

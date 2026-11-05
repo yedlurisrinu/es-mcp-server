@@ -1,6 +1,8 @@
-from pydantic import BaseModel
 from typing import Annotated
+
+from pydantic import BaseModel
 from pydantic.fields import Field
+
 
 class ArticleReference(BaseModel):
     article_id: Annotated[str, Field(description=" A unique news article id ")]

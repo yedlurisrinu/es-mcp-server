@@ -10,7 +10,7 @@ for the app: news-summary-agent has no Elasticsearch client and reaches articles
 
 | Tool | Args | Returns | Errors (client sees) |
 |---|---|---|---|
-| `article_search` | `user_query: NewsQuery{query: str, categories: list[str], fetch_latest: bool}` | `SearchResult{article_refs: [{article_id, score}]}`, top 5 | ES failure → `Error executing tool article_search` (generic, no details) |
+| `article_search` | `user_query: NewsQuery{query: str, categories: list[str], fetch_latest: bool}` | `SearchResult{article_refs: [{article_id, score}]}`, top 5 | ES failure → `Error executing tool article_search: Article search is unavailable` |
 | `category_search` | `categories: list[str]` | `int`, structured as `{"result": n}`: number of docs whose `title` matches any category | ES failure → `Error executing tool category_search: Category search is unavailable` |
 | `mget` | `ids: list[str]` (article ids from `article_search`) | `MGetResponse{article_hits: [{article_id, title, source, link, published_at, content}], content_length, truncated}` | none found → `Error executing tool mget: No articles found for the given client ids`; ES failure → `Error executing tool mget` |
 
@@ -260,6 +260,6 @@ the request sends `Host: es-mcp-lb:9599`; without a valid token the answer is 40
 | Start-up crash `Exception while reading secrets from vault` / `Vault authentication failed` | Vault sealed, unreachable, or token invalid/expired | Unseal Vault (3 keys, see `docker_services/vault_server`), check `vault-network`, renew the token |
 | `mget` → `No articles found for the given client ids` | None of the ids exist in `news_articles` | Pass `article_id`s returned by `article_search`. Check that the ingester indexed them |
 | Tool returns only `Error executing tool <name>` | Unexpected exception, such as an ES error or a rejected API key. Details are hidden from the client | Read `../logs/es-mcp-server-<replica>.log` |
-| `category_search` → `Category search is unavailable` | ES search failed | Check ES health and the replica log |
+| `article_search` → `Article search is unavailable`, or `category_search` → `Category search is unavailable` | ES search failed | Check ES health and the replica log |
 | `article_search` returns `{"article_refs": []}` with `fetch_latest=true` | Nothing has a `published_at` in the last 7 days | Check ingestion, or call with `fetch_latest=false` |
 | es-mcp-lb returns 502 | Both replicas down, or not on `services_network` | `docker ps`, `curl localhost:9551/healthz`, start the replicas before the LB |

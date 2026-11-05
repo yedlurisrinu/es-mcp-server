@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+
 from hvac import Client
 
 logger = logging.getLogger(__name__)
@@ -56,7 +57,5 @@ def load_secrets() -> None:
             logger.info(f" Secrets loaded from Vault: {list(secrets.keys())}")
         logger.info("Loading secrets completed")
     except Exception as e:
-        logger.error(
-            f"Exception while reading secrets from vault :- {e}", exc_info=True
-        )
+        logger.exception("Exception while reading secrets from vault")
         raise ValueError(f"Exception while reading secrets from vault :- {e}")

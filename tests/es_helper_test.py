@@ -13,7 +13,7 @@ stopped talking to Elasticsearch directly):
 from __future__ import annotations
 
 import copy
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
@@ -34,11 +34,16 @@ from tests.conftest import es_doc, es_hit
 class TestBuildSearchQuery:
     def test_sets_user_query_on_multi_match(self) -> None:
         q = build_search_query("ai in healthcare", ["technology"])
-        assert q["query"]["bool"]["must"][0]["multi_match"]["query"] == "ai in healthcare"
+        assert (
+            q["query"]["bool"]["must"][0]["multi_match"]["query"] == "ai in healthcare"
+        )
 
     def test_categories_joined_into_should(self) -> None:
         q = build_search_query("q", ["technology", "health"])
-        assert q["query"]["bool"]["should"][0]["multi_match"]["query"] == "technology health"
+        assert (
+            q["query"]["bool"]["should"][0]["multi_match"]["query"]
+            == "technology health"
+        )
 
     def test_should_dropped_when_no_categories(self) -> None:
         assert "should" not in build_search_query("q", [])["query"]["bool"]
@@ -54,19 +59,30 @@ class TestAppendLatestQuery:
     def test_adds_range_filter_and_sort(self) -> None:
         q = append_latest_query(build_search_query("q", []))
         since = q["query"]["bool"]["filter"][0]["range"]["published_at"]["gte"]
-        age = datetime.now(timezone.utc) - datetime.strptime(since, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-        assert timedelta(days=7) - timedelta(minutes=1) < age < timedelta(days=7, minutes=1)
+        age = datetime.now(UTC) - datetime.strptime(
+            since, "%Y-%m-%dT%H:%M:%SZ"
+        ).replace(tzinfo=UTC)
+        assert (
+            timedelta(days=7) - timedelta(minutes=1)
+            < age
+            < timedelta(days=7, minutes=1)
+        )
         assert q["sort"] == [{"published_at": {"order": "desc"}}, "_score"]
 
 
 class TestCategoryQuery:
     def test_one_should_clause_per_category(self) -> None:
         q = category_query(["technology", "ai"])
-        assert q["query"]["bool"]["should"] == [{"match": {"title": "technology"}}, {"match": {"title": "ai"}}]
+        assert q["query"]["bool"]["should"] == [
+            {"match": {"title": "technology"}},
+            {"match": {"title": "ai"}},
+        ]
 
     def test_aggregation_is_not_sent(self) -> None:
         q = category_query(["technology"])
-        assert q["size"] == 0 and "aggs" not in q  # category_search only reads hits.total
+        assert (
+            q["size"] == 0 and "aggs" not in q
+        )  # category_search only reads hits.total
         assert "aggs" in get_config("CATEGORY_QUERY")  # the definition stays in config
 
     def test_does_not_mutate_loaded_template(self) -> None:
@@ -76,7 +92,9 @@ class TestCategoryQuery:
 
 class TestGetArticleRefs:
     def test_parses_hits(self) -> None:
-        refs = get_article_refs({"hits": {"hits": [es_hit("a1", 2.0), es_hit("a2", 1.5)]}})  # type: ignore[arg-type]
+        refs = get_article_refs(
+            {"hits": {"hits": [es_hit("a1", 2.0), es_hit("a2", 1.5)]}}
+        )  # type: ignore[arg-type]
         assert [(r.article_id, r.score) for r in refs] == [("a1", 2.0), ("a2", 1.5)]
 
     def test_empty_hits(self) -> None:
@@ -89,7 +107,11 @@ class TestPrepareResponse:
         resp = prepare_response({"docs": [es_doc("a1", content="x" * 1500)]})  # type: ignore[arg-type]
         (hit,) = resp.article_hits
         assert (hit.article_id, hit.title, hit.source) == ("a1", "Title a1", "TechNews")
-        assert len(hit.content) == 1000 and resp.truncated is True and resp.content_length == 1000
+        assert (
+            len(hit.content) == 1000
+            and resp.truncated is True
+            and resp.content_length == 1000
+        )
 
     def test_no_truncation_when_disabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setitem(app_config.app_config, "TRUNCATE", False)

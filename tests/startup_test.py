@@ -22,7 +22,9 @@ pytestmark = pytest.mark.anyio
 
 
 class TestLoadSecrets:
-    def test_missing_addr_or_token_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_missing_addr_or_token_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         from config.vault_secrets import load_secrets
 
         monkeypatch.delenv("VAULT_ADDR", raising=False)
@@ -42,41 +44,64 @@ class TestLoadSecrets:
     def test_auth_failure_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from config.vault_secrets import load_secrets
 
-        for k, v in {"VAULT_ADDR": "http://vault-server:8200", "VAULT_TOKEN": "tok", "VAULT_SECRET_PATH": "secret/CREDENTIALS"}.items():
+        for k, v in {
+            "VAULT_ADDR": "http://vault-server:8200",
+            "VAULT_TOKEN": "tok",
+            "VAULT_SECRET_PATH": "secret/CREDENTIALS",
+        }.items():
             monkeypatch.setenv(k, v)
         client = MagicMock()
         client.is_authenticated.return_value = False
-        with patch("config.vault_secrets.Client", return_value=client), pytest.raises(ValueError, match="authentication failed"):
+        with (
+            patch("config.vault_secrets.Client", return_value=client),
+            pytest.raises(ValueError, match="authentication failed"),
+        ):
             load_secrets()
 
-    def test_success_injects_env_for_each_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_success_injects_env_for_each_path(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         from config.vault_secrets import load_secrets
 
-        for k, v in {"VAULT_ADDR": "http://vault-server:8200", "VAULT_TOKEN": "tok", "VAULT_SECRET_PATH": "secret/CREDENTIALS"}.items():
+        for k, v in {
+            "VAULT_ADDR": "http://vault-server:8200",
+            "VAULT_TOKEN": "tok",
+            "VAULT_SECRET_PATH": "secret/CREDENTIALS",
+        }.items():
             monkeypatch.setenv(k, v)
         monkeypatch.delenv("INJECTED_KEY", raising=False)
         client = MagicMock()
         client.is_authenticated.return_value = True
-        client.secrets.kv.v2.read_secret_version.return_value = {"data": {"data": {"INJECTED_KEY": "value"}}}
+        client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {"data": {"INJECTED_KEY": "value"}}
+        }
         with patch("config.vault_secrets.Client", return_value=client):
             load_secrets()
         assert os.environ["INJECTED_KEY"] == "value"
-        assert client.secrets.kv.v2.read_secret_version.call_args.kwargs == {"path": "CREDENTIALS", "mount_point": "secret"}
+        assert client.secrets.kv.v2.read_secret_version.call_args.kwargs == {
+            "path": "CREDENTIALS",
+            "mount_point": "secret",
+        }
 
 
 class TestApplicationConfig:
     def test_get_config_reads_loaded_yaml(self) -> None:
         from config.application_config import get_config
 
-        assert get_config("ES_INDEX") == "news_articles" and get_config("ARTICLE_CONTENT_MAX_CHARS") == 1000
+        assert (
+            get_config("ES_INDEX") == "news_articles"
+            and get_config("ARTICLE_CONTENT_MAX_CHARS") == 1000
+        )
 
-    def test_missing_file_is_logged_not_raised(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_missing_file_is_logged_not_raised(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import config.application_config as app_config
 
         monkeypatch.setattr(app_config, "BASE_PATH", "/nonexistent")
         with patch.object(app_config, "logger") as logger:
             app_config.load_config()
-        logger.error.assert_called_once()
+        logger.exception.assert_called_once()
 
 
 class TestSetupLogging:
@@ -87,7 +112,9 @@ class TestSetupLogging:
         with patch("config.logging_setup.logging.config.dictConfig") as dict_config:
             setup_logging()
         (config,), _ = dict_config.call_args
-        assert config["handlers"]["file"]["filename"] == "/app/logs/es-mcp-server-r9.log"
+        assert (
+            config["handlers"]["file"]["filename"] == "/app/logs/es-mcp-server-r9.log"
+        )
 
     def test_bad_file_falls_back_to_basic_config(self) -> None:
         from config.logging_setup import setup_logging
@@ -110,7 +137,10 @@ class TestElasticsearchClient:
         from adapters.elasticsearch import get_es_client
 
         monkeypatch.delenv("ELASTIC_READ_API_KEY", raising=False)
-        with patch("adapters.elasticsearch.Elasticsearch") as es_cls, pytest.raises(RuntimeError, match="ELASTIC_READ_API_KEY"):
+        with (
+            patch("adapters.elasticsearch.Elasticsearch") as es_cls,
+            pytest.raises(RuntimeError, match="ELASTIC_READ_API_KEY"),
+        ):
             get_es_client()
         es_cls.assert_not_called()
 
@@ -123,7 +153,9 @@ class TestElasticsearchClient:
             with pytest.raises(RuntimeError, match="ping"):
                 get_es_client()
 
-    def test_builds_client_from_config_once(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_builds_client_from_config_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         from adapters.elasticsearch import get_es_client
 
         monkeypatch.setenv("ELASTIC_READ_API_KEY", "read-key")
@@ -132,7 +164,9 @@ class TestElasticsearchClient:
             assert get_es_client() is get_es_client() is es_cls.return_value
         es_cls.assert_called_once()
         args, kwargs = es_cls.call_args
-        assert args == ("http://elasticsearch:9200",) and kwargs["api_key"] == "read-key"
+        assert (
+            args == ("http://elasticsearch:9200",) and kwargs["api_key"] == "read-key"
+        )
         assert kwargs["request_timeout"] == 60 and kwargs["connections_per_node"] == 10
 
 
@@ -166,11 +200,16 @@ class TestLifespan:
 
 
 class TestMain:
-    def test_create_app_with_dns_rebinding_protection(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_create_app_with_dns_rebinding_protection(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("MCP_ALLOWED_HOSTS", "es-mcp-lb:9599, localhost:9551")
         monkeypatch.setenv("REPLICA_ID", "r1")
         sys.modules.pop("main", None)
-        with patch("config.vault_secrets.load_secrets"), patch("config.logging_setup.setup_logging"):
+        with (
+            patch("config.vault_secrets.load_secrets"),
+            patch("config.logging_setup.setup_logging"),
+        ):
             import main
         try:
             assert main.ALLOWED_HOSTS == ["es-mcp-lb:9599", "localhost:9551"]

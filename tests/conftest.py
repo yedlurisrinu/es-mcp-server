@@ -62,7 +62,9 @@ def es_doc(article_id: str, content: str = "body text") -> dict[str, Any]:
 @pytest.fixture()
 def es() -> MagicMock:
     es = MagicMock()
-    es.search.return_value = {"hits": {"total": {"value": 1}, "hits": [es_hit("a1", 2.5)]}}
+    es.search.return_value = {
+        "hits": {"total": {"value": 1}, "hits": [es_hit("a1", 2.5)]}
+    }
     es.mget.return_value = {"docs": [es_doc("a1")]}
     return es
 
@@ -72,7 +74,9 @@ def mcp_server(es: MagicMock) -> MCPServer[Any]:
     from server.mcp_server import ESMCPServer
 
     @asynccontextmanager
-    async def fake_lifespan(server: MCPServer[AppResources]) -> AsyncIterator[AppResources]:
+    async def fake_lifespan(
+        server: MCPServer[AppResources],
+    ) -> AsyncIterator[AppResources]:
         yield AppResources(es=es)
 
     return ESMCPServer(fake_lifespan).create_mcp_server(replica_id="r-test")
