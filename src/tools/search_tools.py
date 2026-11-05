@@ -18,7 +18,7 @@ from helpers.es_helper import append_latest_query, build_search_query, get_artic
 log = logging.getLogger(__name__)
 
 CATEGORY_SEARCH_UNAVAILABLE = "Category search is unavailable"
-
+ARTICLE_SEARCH_UNAVAILABLE = "Article search is unavailable"
 class NewsSearchTools:
 
     @staticmethod
@@ -31,9 +31,9 @@ class NewsSearchTools:
         log.debug('Query : %s', query)
         try:
             response = ctx.request_context.lifespan_context.es.search(index=get_config("ES_INDEX"), **query)
-        except Exception:
+        except Exception as exc:
             log.exception('Exception while searching for articles for query: %s', query)
-            raise
+            raise ToolError(ARTICLE_SEARCH_UNAVAILABLE) from exc
 
         article_refs = get_article_refs(response)
         log.info('article_search: %d hits in %.3fs', len(article_refs), time.time() - start)
