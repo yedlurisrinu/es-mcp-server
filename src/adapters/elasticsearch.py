@@ -1,11 +1,10 @@
+"""Elasticsearch client factory — the only place es-mcp-server connects to Elasticsearch.
+
+The read-only API key comes from Vault (loaded into the environment at startup); the URL
+and client tuning come from resources/application-config.yaml.
+"""
+
 from __future__ import annotations
-
-"""
-agents/base.py
-
-Shared Elasticsearch client factory and common data models used across all agents.
-Credentials are read from environment variables populated by HashiCorp Vault at startup.
-"""
 
 import os
 from functools import lru_cache
@@ -19,9 +18,11 @@ from config.application_config import get_config
 def get_es_client() -> Elasticsearch:
     """
     Build and return a cached Elasticsearch client.
-    Expects the following env vars (loaded from Vault):
-      ELASTIC_API_KEY    — Elastic Cloud API key
-      And other config values loaded form application-config.properties
+    Expects ``ELASTIC_READ_API_KEY`` in the environment (from Vault, secret/CREDENTIALS)
+    and ``ELASTIC_URL``, ``request_timeout``, ``retry_on_timeout``, ``max_retries``,
+    ``http_compress``, ``connections_per_node`` in application-config.yaml.
+    Fails fast: a missing ``ELASTIC_URL`` key raises ``KeyError`` (from ``get_config``), an
+    empty URL or a missing/empty API key raises ``RuntimeError``, and so does a failed ping.
     """
 
     elastic_url = get_config("ELASTIC_URL")

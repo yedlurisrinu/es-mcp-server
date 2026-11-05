@@ -29,19 +29,29 @@ services:
   es-mcp-server-1:
     <<: *es_mcp
     container_name: es-mcp-server-r1
+    logging:              # Docker keeps at most 3 x 10 MB per container, oldest deleted
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       <<: *es_mcp_env
       REPLICA_ID: r1
-    ports: ["9551:8009"]
+    ports: ["127.0.0.1:9551:8009"]
     volumes:
       - ../logs:/app/logs
   es-mcp-server-2:
     <<: *es_mcp
     container_name: es-mcp-server-r2
+    logging:              # Docker keeps at most 3 x 10 MB per container, oldest deleted
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       <<: *es_mcp_env
       REPLICA_ID: r2
-    ports: ["9552:8009"]
+    ports: ["127.0.0.1:9552:8009"]
     volumes:
       - ../logs:/app/logs
 # ── Networks ──────────────────────────────────────────────────────────────────

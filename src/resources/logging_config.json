@@ -13,21 +13,23 @@
             "level": "INFO"
         },
         "file": {
-            "class": "logging.FileHandler",
+            "class": "logging.handlers.TimedRotatingFileHandler",
             "filename": "/app/logs/es-mcp-server.log",
+            "when": "midnight",
+            "interval": 1,
+            "backupCount": 14,
+            "utc": true,
+            "encoding": "utf-8",
             "formatter": "standard",
             "level": "INFO"
         }
     },
     "root": {
-        "handlers": ["console", "file"],
+        "handlers": [
+            "console",
+            "file"
+        ],
         "level": "DEBUG"
     },
-    "loggers": {
-        "my_project": {
-            "handlers": ["console", "file"],
-            "level": "DEBUG",
-            "propagate": false
-        }
-    }
+    "loggers": {}
 }

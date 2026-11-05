@@ -4,9 +4,7 @@ from typing import Any
 from yaml import safe_load
 import logging
 
-logger = logging.getLogger(__file__)
-# TODO define a class and make this as a private variable
-# Or find way to make these settings as read only like dataclass
+logger = logging.getLogger(__name__)
 app_config : dict[str, Any]= {}
 BASE_PATH = str(Path(__file__).resolve().parent.parent)
 

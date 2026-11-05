@@ -1,24 +1,28 @@
 [project]
 name = "es-mcp-server"
 version = "0.1.0"
-description = "Add your description here"
+description = "MCP server exposing read-only news search tools over the Elasticsearch news index"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "elastic-transport==9.4.2",
     "elasticsearch==9.2.1",
+    "httpx2==2.16.0",
     "hvac==2.4.0",
     "joserfc==1.7.7",
     "mcp==2.3.0",
     "pydantic==2.14.1",
     "pyyaml==6.0.3",
+    "starlette==1.10.0",
     "uvicorn==0.54.0",
 ]
 
 [dependency-groups]
 dev = [
-    "mypy>=2.3.1",
-    "pytest>=9.1.1",
-    "pytest-cov>=7.1.0",
+    "mypy==2.4.1",
+    "pytest==9.2.0",
+    "pytest-cov==7.1.0",
+    "types-pyyaml==6.0.12.20261103",
 ]
 
 [tool.mypy]
@@ -26,8 +30,28 @@ python_version = "3.12"
 mypy_path = "src"
 explicit_package_bases = true
 namespace_packages = true
-ignore_missing_imports = true      # langgraph, langsmith and hvac ship no stubs
 warn_unused_ignores = true
+
+# Untyped third-party packages only (no py.typed, no stub package).
+# Never set ignore_missing_imports globally: it hides missing first-party modules.
+[[tool.mypy.overrides]]
+module = ["hvac", "hvac.*"]
+ignore_missing_imports = true
 
 [tool.uv]
 package = true
+
+[tool.coverage.run]
+source = ["src"]
+branch = false
+
+[tool.coverage.report]
+# src/ has no __init__.py files: without this, modules no test imports are left out of the report
+include_namespace_packages = true
+show_missing = true
+skip_empty = true
+fail_under = 90
+exclude_also = [
+    'if __name__ == .__main__.:',
+    '^\s*\.\.\.\s*$',
+]

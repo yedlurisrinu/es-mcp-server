@@ -1,0 +1,10 @@
+name: gitleaks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  secrets:
+    uses: yedlurisrinu/ci-workflows/.github/workflows/gitleaks.yml@main

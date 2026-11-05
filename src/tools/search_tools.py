@@ -4,6 +4,7 @@ from elastic_transport import ObjectApiResponse
 from mcp.server.mcpserver import Context
 from pydantic.fields import Field
 from typing import Annotated, Any
+from mcp.server.mcpserver.exceptions import ToolError
 from config.application_config import get_config
 from data.app_resource import AppResources
 from data.search_result import SearchResult
@@ -14,39 +15,40 @@ import logging
 
 from helpers.es_helper import append_latest_query, build_search_query, get_article_refs, category_query, prepare_response
 
-log = logging.getLogger(__file__)
+log = logging.getLogger(__name__)
+
+CATEGORY_SEARCH_UNAVAILABLE = "Category search is unavailable"
 
 class NewsSearchTools:
 
     @staticmethod
-    def article_search(user_query: Annotated[NewsQuery, Field(description=" Query for searching the Elasticsearch ")], ctx: Context[AppResources, Any]) -> SearchResult:
+    def article_search(user_query: Annotated[NewsQuery, Field(description="The user query, its news categories and whether only recent articles are wanted")], ctx: Context[AppResources, Any]) -> SearchResult:
         start = time.time()
         log.debug(f'search intent incoming state : {user_query}')
         query = build_search_query(user_query.query, user_query.categories)
         if user_query.fetch_latest:
             query = append_latest_query(query)
-        log.info(f'Query : {query}')
+        log.debug('Query : %s', query)
         try:
             response = ctx.request_context.lifespan_context.es.search(index=get_config("ES_INDEX"), **query)
         except Exception:
             log.exception('Exception while searching for articles for query: %s', query)
             raise
 
-        log.info(f'Response from Elasticsearch : {response}, Duration in seconds (SEARCH) : { time.time() - start}')
-
-        return SearchResult.model_validate({'article_refs': get_article_refs(response)})
+        article_refs = get_article_refs(response)
+        log.info('article_search: %d hits in %.3fs', len(article_refs), time.time() - start)
+        return SearchResult.model_validate({'article_refs': article_refs})
 
     @staticmethod
-    def category_search(categories: Annotated[list[str], Field(description=" Query for searching the Elasticsearch ")], ctx: Context[AppResources, Any]) -> int:
+    def category_search(categories: Annotated[list[str], Field(description="News categories, e.g. technology, politics")], ctx: Context[AppResources, Any]) -> int:
         """
-        Run a terms aggregation on source.keyword to confirm at least one article
-        exists for each requested category.  Falls back to returning the LLM
-        categories as-is if ES has no 'category' field — the search agent will
-        still use them as semantic query hints.
+        Count the indexed articles whose title matches any of the categories.
+
+        An ES failure raises ``ToolError`` with fixed text (no hosts or messages).
         """
         try:
             query = category_query(categories)
-            log.info(f"Query getting executed: {query}")
+            log.debug("Query getting executed: %s", query)
             resp = ctx.request_context.lifespan_context.es.search(index=get_config("ES_INDEX"), **query)
             total_hits = int(resp["hits"]["total"]["value"])
             if total_hits == 0:
@@ -61,13 +63,12 @@ class NewsSearchTools:
                     categories,
                 )
             return total_hits
-        except Exception:  # noqa: BLE001
-            log.exception("ES category verification failed skipping check.")
-
-        return 0
+        except Exception as exc:
+            log.exception("ES category verification failed")
+            raise ToolError(CATEGORY_SEARCH_UNAVAILABLE) from exc
 
     @staticmethod
-    def mget(ids: Annotated[list[str], Field(description=" Elasticsearch record _id for fetching by id ")],
+    def mget(ids: Annotated[list[str], Field(description="Article ids (as returned by article_search)")],
                     ctx: Context[AppResources, Any]) -> MGetResponse:
          result : ObjectApiResponse[Any] = ctx.request_context.lifespan_context.es.mget(
                     index=get_config("ES_INDEX"),

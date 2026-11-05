@@ -1,5 +1,5 @@
 # ── Build stage ─────────────────────────────────────────────────────────────
-FROM python:3.12-slim AS builder
+FROM python:3.12.16-slim AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 # ── Stage 2: Runtime ──────────────────────────────────────
-FROM python:3.12-slim AS runtime
+FROM python:3.12.16-slim AS runtime
 
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
@@ -40,7 +40,7 @@ RUN mkdir -p /app/logs/ && chown -R appuser:appuser /app/logs
 
 USER appuser
 
-# App listens on 8007
-EXPOSE 8007
+# App listens on 8009
+EXPOSE 8009
 
 CMD ["python", "-m", "uvicorn", "main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8009", "--log-level", "info"]

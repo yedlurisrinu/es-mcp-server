@@ -3,8 +3,6 @@ import os
 import socket
 from typing import Any
 
-import asyncio
-import uvicorn
 
 from adapters.lifespan import lifespan
 from config.logging_setup import setup_logging
@@ -22,6 +20,3 @@ def create_app() -> Any:
    return ESMCPServer(lifespan).create_mcp_server(replica_id=replica_id).streamable_http_app(
 stateless_http=True, transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=True,
         allowed_hosts=ALLOWED_HOSTS, allowed_origins=[],), host="0.0.0.0")
-
-if __name__ == '__main__':
-  uvicorn.run(create_app())

@@ -10,7 +10,9 @@ from data.mget_response import MGetResponse
 from mcp.server.mcpserver.exceptions import ToolError
 import logging
 
-log = logging.getLogger(__file__)
+log = logging.getLogger(__name__)
+
+NO_ARTICLES_FOUND = "No articles found for the given client ids"
 
 def get_article_refs(response: ObjectApiResponse[Any]) -> list[ArticleReference]:
         """Extract (article_id, score) references from an ES search response."""
@@ -22,7 +24,11 @@ def get_article_refs(response: ObjectApiResponse[Any]) -> list[ArticleReference]
         return article_ref
         
 def append_latest_query(base: dict[str, Any]) -> dict[str, Any]:
-    """Add a 7-day ``published_at`` range filter and a recency-first sort to the query."""
+    """Add a ``published_at`` range filter and a recency-first sort to the query.
+
+    The lower bound is an absolute UTC timestamp (now - 7 days, ``%Y-%m-%dT%H:%M:%SZ``)
+    computed here, not ES date math. It replaces any existing ``bool.filter``.
+    """
     since = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
     base["query"]["bool"]["filter"] = [{"range": {"published_at": {"gte": since}}}]
     base["sort"] = [
@@ -44,15 +50,23 @@ def build_search_query(user_query: str, categories : list[str]) -> Any:
     return query
 
 def category_query(categories: list[str]) -> Any:
-    """Build a bool-should title-match ES query from the template, one clause per category."""
+    """Build a bool-should title-match ES query from the template, one clause per category.
+
+    category_search only reads hits.total, so the template's aggregation (kept in config for
+    later use) is not sent: Elasticsearch would compute it on every call for nothing. It also
+    targets ``source.keyword``, which does not exist under the strict mapping (``source`` is
+    itself a keyword field).
+    """
     q = copy.deepcopy(get_config("CATEGORY_QUERY"))  # never mutate the loaded template
+    q.pop("aggs", None)
     q["query"]["bool"]["should"] = [{"match": {"title": c}} for c in categories]
     return q
 
 def prepare_response(hits: ObjectApiResponse[Any]) -> MGetResponse:
-    docs = hits.get('docs',[])
+    # ES returns {"_id": ..., "found": false} (no _source) for ids that don't exist: skip those.
+    docs = [doc for doc in hits.get('docs', []) if doc.get('found')]
     if not docs:
-         raise ToolError("No articles found for the given client ids")
+         raise ToolError(NO_ARTICLES_FOUND)
     content_length = get_config("ARTICLE_CONTENT_MAX_CHARS")
     truncate = get_config("TRUNCATE")
     articleHits : list[ArticleHit] = []

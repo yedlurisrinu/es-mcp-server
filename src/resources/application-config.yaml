@@ -4,7 +4,7 @@ ELASTIC_URL: "http://elasticsearch:9200"
 # ELASTIC_URL: "http://localhost:9200"
 request_timeout: 60
 retry_on_timeout: True
-max_retries: 3
+max_retries: 1
 http_compress: True
 # Connection pooling for cloud
 connections_per_node: 10
@@ -16,15 +16,19 @@ CATEGORY_QUERY:
     bool:
       should: []                 # filled in code, one match clause per category
       minimum_should_match: 1
+  # Kept for later use but removed before sending (helpers/es_helper.category_query):
+  # category_search only reads hits.total, and source is a plain keyword field, so
+  # source.keyword does not exist under the strict mapping.
   aggs:
     matched_sources:
       terms:
         field: source.keyword
         size: 20
 
-# Build an ES query that:
-      # - Uses semantic search on the `content.semantic` field (semantic_text). TODO this part is not complete yet
-      # - Boosts documents whose title matches any of the extracted categories.
+# article_search query template (filled in helpers/es_helper.build_search_query):
+# - must: plain lexical multi_match of the user query on title^2 and content.
+# - should: boosts documents whose title matches the joined categories (dropped when there are none).
+# Semantic search (content.semantic, semantic_text) is not implemented yet.
 SEARCH_QUERY_TEMPLATE:
   size: 5
   _source: [article_id]
@@ -43,6 +47,7 @@ SEARCH_QUERY_TEMPLATE:
 
 issuer_realm: http://keycloak:8180/realms/es-mcp
 well_known_uri: /.well-known/openid-configuration
+jwks_http_timeout_sec: 5
 audience: http://es-mcp-lb:9599/mcp
 ARTICLE_CONTENT_MAX_CHARS: 1000
 TRUNCATE: True
