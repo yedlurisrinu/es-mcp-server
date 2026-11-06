@@ -1,3 +1,4 @@
+[![M8ven Score](https://m8ven.ai/badge/mcp/yedlurisrinu-es-mcp-server-y3qe3g?v=f0d3ef373445b1493213869ab3778470)](https://m8ven.ai/mcp/yedlurisrinu-es-mcp-server-y3qe3g?s=readme)
 # es-mcp-server
 
 ## Purpose
